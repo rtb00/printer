@@ -2,37 +2,44 @@
 
 import sys
 
-if len(sys.argv) < 2:
-    print("Usage: {} <number_pages>".format(sys.argv[0]))
-    sys.exit(1)
 
-number_pages = sys.argv[1]
-delete_pages = sys.argv[2] if len(sys.argv) > 2 else ""
+def compute_page_order(n, delete_pages_str="", verbose=False):
+    """Berechnet die Seitenreihenfolge für Klammerheftung (Saddle Stitch)."""
+    excluded = [s.strip() for s in delete_pages_str.split(",") if s.strip()]
+    pages = [i for i in range(1, n + 1) if str(i) not in excluded]
 
-try:
-    n = int(number_pages)
-except ValueError:
-    print("Ungültige Eingabe")
-    exit(1)
+    # Auf nächstes Vielfaches von 4 auffüllen (ein gefaltetes Blatt = 4 Seiten)
+    remainder = len(pages) % 4
+    if remainder != 0:
+        pages = pages + [None] * (4 - remainder)
 
-pages = [i for i in range(1, n+1) if str(i) not in delete_pages.replace(' ','').split(",")]
-pages_len = len(pages)
+    if verbose:
+        print(pages)
 
-pages = pages + [None] * (-1*(pages_len % -4))
+    result_pairs = []
+    for index in range(len(pages) // 2):
+        if index % 2 != 0:
+            result_pairs.append((pages[index], pages[-index - 1]))
+        else:
+            result_pairs.append((pages[-index - 1], pages[index]))
 
-print(pages)
-
-result_pairs = []
-for index in range((pages_len // 4 +1)*2):
-    if index % 2 != 0:
-        result_pairs.append((pages[index], pages[-index-1]))
-    else:
-        result_pairs.append((pages[-index-1], pages[index]))
-
-# ## jedes 2. paar wird umgedreht
-# for i in range(0, len(result_pairs), 2):
-#     result_pairs[i] = result_pairs[i][::-1]
-result = "_".join([str(i) if i is not None else 'Empty' for pair in result_pairs for i in pair])
+    return [i for pair in result_pairs for i in pair]
 
 
-print(result)
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: {} <number_pages> [pages_to_delete] [--verbose]".format(sys.argv[0]))
+        sys.exit(1)
+
+    verbose = "--verbose" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--verbose"]
+
+    try:
+        n = int(args[0])
+    except ValueError:
+        print("Ungültige Eingabe")
+        exit(1)
+
+    delete_pages_str = args[1] if len(args) > 1 else ""
+    result = compute_page_order(n, delete_pages_str, verbose=verbose)
+    print("_".join(str(i) if i is not None else "Empty" for i in result))

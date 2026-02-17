@@ -1,9 +1,15 @@
 #! python3
 
 import os
-import pymupdf
+try:
+    import pymupdf
+except ImportError:
+    import fitz as pymupdf
 import tkinter as tk
 from tkinter import filedialog
+from book_pages import compute_page_order
+
+os.makedirs('./pdfs', exist_ok=True)
 
 def remove_unwanted_pages(pdf_path, pages, output_pdf_path=None):
     doc = pymupdf.open(pdf_path)
@@ -45,21 +51,19 @@ def submit_text():
         success_label.config(text="Keine PDF-Datei ausgewählt!", fg="red")
         return
 
-    doc = pymupdf.open(file_path)
-    length = doc.page_count
-    doc.close()
-
-    seiten_str = os.popen("python3 book_pages.py " + str(length) + ' ' + user_input).read()
-    
     try:
-        seiten = [int(num.strip()) if num.strip().isdigit() else None for num in seiten_str.split("_")]
-        output_filename = "_".join(str(s) for s in seiten) + ".pdf"
+        doc = pymupdf.open(file_path)
+        length = doc.page_count
+        doc.close()
+
+        seiten = compute_page_order(length, user_input)
+        output_filename = "_".join(str(s) if s is not None else "Empty" for s in seiten) + ".pdf"
         output_pdf_path = os.path.join('./pdfs', output_filename)
-        
+
         result_path = remove_unwanted_pages(file_path, seiten, output_pdf_path)
         success_label.config(text=f"PDF erstellt: {result_path}", fg="green")
-    except ValueError:
-        success_label.config(text="Fehler bei der Verarbeitung!", fg="red")
+    except Exception as e:
+        success_label.config(text=f"Fehler: {e}", fg="red")
 
 def upload_pdf():
     global file_label, file_path
